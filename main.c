@@ -1,16 +1,18 @@
+#include <stddef.h>
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
 
 typedef struct Dynvec {
-    int *data;       
+    int *data;   
+    size_t elem_size;    
     size_t capacity; /* capacidade total do vetor  */
     size_t length; //espaço do vetor preenchido com data
 } dynvec;
 
 #define DYNVEC_INIT_CAPACITY 4
 
-dynvec *dynvec_create(void){
+dynvec *dynvec_create(size_t elem_size){
     dynvec *v = (dynvec *)malloc(sizeof(dynvec));
     if (!v){
         errno = ENOMEM;
@@ -20,9 +22,10 @@ dynvec *dynvec_create(void){
         return NULL;
     }
 
+    v->elem_size = elem_size; //Isto define quantos bytes cada elemento ocupará no vetor dinâmico
     v->capacity = DYNVEC_INIT_CAPACITY;
     v->length = 0;
-    v->data = (int *)malloc(sizeof(int) * v->capacity);
+    v->data = malloc(elem_size * v->capacity);
 
     if ((v->data) == NULL) {
         errno = ENOMEM;
@@ -42,9 +45,9 @@ void dynvec_empty(dynvec *v) {
         free(v);
     }
     
-    v->capacity = DYNVEC_INIT_CAPACITY;
+    v->capacity = DYNVEC_INIT_CAPACITY; 
     v->length = 0;
-    v->data = (int *)malloc(sizeof(int) * v->capacity);
+    v->data = malloc(v->elem_size * v->capacity);
     if (!v)
     {
         errno = ENOMEM;
@@ -64,14 +67,8 @@ size_t dynvec_length(dynvec *v) {
     return v->length;
 }
 
-static void dynvec_resize(dynvec *v, int size) {
-    if (v->capacity == v->length)
-    {
-        v->capacity = v->capacity * 2;
-    } else if (v->length <= v->capacity * 0.25);
-    {
-        v->capacity = v->capacity / 2;
-    }
+static void dynvec_resize(dynvec *v, size_t size) {
+    
     
 }
 
