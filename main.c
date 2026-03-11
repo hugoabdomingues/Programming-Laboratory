@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 typedef struct Dynvec {
     void *data;   
@@ -41,21 +42,18 @@ dynvec *dynvec_create(size_t elem_size){
 }
 
 void dynvec_empty(dynvec *v) {
-    if (v->data)
-    {
-        free(v);
+    if (v->data){
+        free(v->data);
     }
     
     v->capacity = DYNVEC_INIT_CAPACITY; 
     v->length = 0;
     v->data = malloc(v->elem_size * v->capacity);
-    if (!v)
-    {
+    if (!v->data) {
         errno = ENOMEM;
         #ifdef DEBUG_ON
-            perror("Erro ao alocar memória.")
+            perror("Erro ao alocar memória.");
         #endif
-        
     }
     return;
 }
@@ -73,8 +71,7 @@ static void dynvec_resize(dynvec *v, size_t size) {
     /*realloc: se houver espaço a seguir ao bloco atual, ele apenas estica o bloco. Se não houver, 
     ele encontra um novo lugar na memória suficientemente grande, copia os dados antigos lá para dentro automaticamente, e apaga o bloco antigo.*/
     void *new_memory = realloc(v->data, v->elem_size * size); //O novo tamanho em bytes é calculado multiplicando o tamanho de cada elemento (v->elem_size) pela nova capacidade (size)
-    if (!v)
-    {
+    if (!new_memory) {
         errno = ENOMEM;
         #ifdef DEBUG_ON
             perror("Resize. Erro no array, ao realocar memória");
@@ -83,7 +80,6 @@ static void dynvec_resize(dynvec *v, size_t size) {
     }
     v->data = new_memory;
     v->capacity = size; 
-    
 }
 /* Nota: v->data é um ponteiro do tipo genérico void *. Como em C o compilador não sabe o tamanho dos elementos
  para onde um void * aponta, não é permitido fazer operações aritméticas diretamente num void *.
@@ -92,9 +88,8 @@ avançamos exatamente 1 byte de memória.
  */
 
 void dynvec_push (dynvec *v, void *item) {
-
     if (!v) {
-        errno = EINVAL;
+        errno = EINVAL; //erro de argumento inválido.
         #ifdef DEBUG_ON
             perror("Push. Vetor dinâmico inválido.");
         #endif
@@ -115,13 +110,16 @@ void dynvec_push (dynvec *v, void *item) {
 
 }
 
-void dynvec_pop (dynvec *v) {
+void* dynvec_pop (dynvec *v) {
     if (!v) {
         errno = EINVAL;
         #ifdef DEBUG_ON
             perror("Pop. Vetor dinâmico inválido.");
         #endif
-        return;
+        return NULL;
+    }
+    if (v->length == 0) {
+        return NULL;
     }
     //guardamos o item que queremos dar pop antes de diminuirmos o length para dps dar return
     void *item = (char *)v->data + (v->length-1) * v->elem_size;
@@ -137,7 +135,11 @@ void dynvec_pop (dynvec *v) {
 
 
 /**
- * função que visa colocar um item dado no índice INDEX dado também
+ * função que visa colocar um valor ITEM dado no índice INDEX dado
+ * @param v Vetor dinâmico
+ * @param index índice do vetor 
+ * @param item valor a ser colocado no índice INDEX 
+ * @return nada
  */
 void dynvec_set(dynvec *v, size_t index, void *item) {
     if (!v) {
@@ -149,18 +151,216 @@ void dynvec_set(dynvec *v, size_t index, void *item) {
     }
     if (index == v->length) {
         dynvec_push(v, item);
-    } else if (index < 0 || index > v->length) {
-        errno = ERANGE;
+        return;
+    } else if (index > v->length) {
+        errno = ERANGE; //erro de Index out of bounds
         #ifdef DEBUG_ON
-            perror("set. Índice invalido");
+            perror("set. Index out of bounds");
         #endif
         return;
     }
     memmove((char *)v->data + index * v->elem_size, item, v->elem_size);
 }
 
+/**
+ * Esta função devolve o valor que está no índice passado em argumento (index)
+ * @param v Vetor dinâmico
+ * @param index índice do vetor 
+ * @return valor do índice INDEX
+ */
+void* dynvec_get(dynvec *v, size_t index) {
 
+    if (!v) {
+        errno = EINVAL;
+        #ifdef DEBUG_ON
+            perror("get. Vetor dinâmico inválido.");
+        #endif
+        return NULL;
+    }
+    if (index >= v->length) {
+        errno = ERANGE;
+        #ifdef DEBUG_ON
+            perror("get. Index out of bounds.");
+        #endif
+        return NULL; 
+    }
+    return (char *)v->data + index * v->elem_size;
+}
 
+/**
+ * Esta função devolve o último valor do array
+ * @param v vetor dinâmico
+ * @return valor do fim do array
+ */
+void* dynvec_top(dynvec *v) {
+    if (!v) {
+        errno = EINVAL;
+        #ifdef DEBUG_ON
+            perror("top. Vetor dinâmico inválido.");
+        #endif
+        return NULL;
+    }
+    return (char *)v->data + (v->length - 1) * v->elem_size;
+}
+/**
+ * insere o valor value no indice index no campo data do dynvec apontado por v. 
+ * Todos os valores de index para a direita até length-1 são puxados de uma posição à direita, 
+ * para dar espaço ao novo valor. 
+ * @param v array dinâmico
+ * @param index índice onde o valor VALUE deve ser inserido
+ * @param value Valor a ser inserido no índice INDEX
+ */
+void dynvec_insert(dynvec *v, size_t index, void *value) {
+    if (!v) {
+        errno = EINVAL;
+        #ifdef DEBUG_ON
+            perror("Insert. Vetor dinâmico inválido.");
+        #endif
+        return;
+    }
+    //se for índice inválido
+    if (index > v->length){
+        errno = ERANGE;
+        #ifdef DEBUG_ON
+            perror("insert. Index out of bounds.");
+        #endif
+        return;
+    }
+    if (index == v->length){ //se o index for igual a length
+        dynvec_push(v, value);
+    } else { //se o índice solicitado tiver no meio do array --> right shift
+        //right shift:
+        if (v->length >= v->capacity) {
+            dynvec_resize(v, v->capacity * 2);
+        }
+        for (int i = (int)v->length; i > index; i--) {
+            void *src = (char *)v->data + (i-1) * v->elem_size;
+            void *dest = (char *)v->data + i * v->elem_size;
+            memmove(dest,src,v->elem_size);
+        }
+        //Com os shifts todos feitos, falta apenas meter o valor no índice INDEX que está agr vazio.
+        void *indice_destino = (char *)v->data + index * v->elem_size; 
+        memmove(indice_destino, value, v->elem_size); 
+        v->length++; //finalmente aumentamos a length que tinhamos ignorado até agr
+    }
+}
+/**
+ * esta função remove o valor da posição index do vetor data de v. Todos os valores de index para
+ *  a direita até length -1 são puxados de uma posição à esquerda, para ocupar o espaço libertado. 
+ * @param v array dinâmico
+ * @param index índice onde o valor VALUE deve ser inserido
+ * @param value Valor a ser inserido no índice INDEX 
+ * */
+void dynvec_delete(dynvec *v, size_t index) {
+    if (!v) {
+        errno = EINVAL;
+        #ifdef DEBUG_ON
+            perror("delete. Vetor dinâmico inválido.");
+        #endif
+        return;
+    }
+    if (index >= v->length) {
+        errno = ERANGE;
+        #ifdef DEBUG_ON
+            perror("delete. Index out of bounds.");
+        #endif
+        return;
+    } else if (index == v->length-1) {
+        dynvec_pop(v);
+    } else {
+        for (int i = index; i < (int)v->length-1; i++) {
+            void *src = (char *)v->data + (i+1) * v->elem_size; //um índice à direita do INDEX
+            void *dest = (char *)v->data + i * v->elem_size; //índice INDEX a ser sobreescrito
+            memmove(dest,src,v->elem_size);
+        }
+        v->length--;
+        if (v->length <= v->capacity * 0.25){
+            dynvec_resize(v, v->capacity * 0.5);
+        }
+    }
+}
+
+/**
+ * verifica se um determinado valor ITEM é elemento do dynvec v
+ * @return true se encontrar o valor ITEM for elemento do dynvec e false se não for.
+ */
+bool dynvec_contains(dynvec* v, void *item) {
+    if (!v) {
+        errno = EINVAL;
+        #ifdef DEBUG_ON
+            perror("contains. Vetor dinâmico inválido.");
+        #endif
+        return false;
+    }
+    for (int i = 0; i < (int)v->length; i++) {
+        void *valor_atual = (char *)v->data + i * v->elem_size;
+        // memcmp devolve 0 se os blocos de memória forem iguais
+        if (memcmp(item, valor_atual, v->elem_size) == 0) { // usamos memcmp para comparar os valores dos ponteiros
+            return true;
+        }
+    }
+    return false;  
+}
+
+/**
+ * devolve o primeiro índice onde se encontra o valor inteiro passado em parâmetro (item) no dynvec 
+ * igualmente passado por referência (v).
+ * @param v array dinâmico
+ * @param item 
+ */
+int dynvec_index(dynvec* v, void* item) {
+    if (!v) {
+        errno = EINVAL;
+        #ifdef DEBUG_ON
+            perror("contains. Vetor dinâmico inválido.");
+        #endif
+        return -1;
+    }
+    for (int i = 0; i < (int)v->length; i++) {
+        void *valor_atual = (char *)v->data + i * v->elem_size;
+        // memcmp devolve 0 se os blocos de memória forem iguais
+        if (memcmp(item, valor_atual, v->elem_size) == 0) { // usamos memcmp para comparar os valores dos ponteiros
+            return i;
+        }
+    }
+    return -1;  
+}
+/**
+ * Esta função imprime na saída standard (stdout) o conteúdo do dynvec passado em parâmetro.
+ */
+void dynvec_print (dynvec *v) {
+        if (!v) {
+        errno = EINVAL;
+        #ifdef DEBUG_ON
+            perror("print. Vetor dinâmico inválido.");
+        #endif
+        return;
+    }
+
+    // Convertemos os dados genéricos (void*) para um array de inteiros (int*)
+    int *valores_do_array = (int *)v->data;
+
+    for (int i = 0; i < (int)v->length; i++) {
+        printf("%d ", valores_do_array[i]);
+    }
+    printf("\n");
+}
+/**
+ * Esta função liberta todo o espaço do dynvec v passado por referência, campo a campo, terminando com v ele próprio.
+ */
+void dynvec_free (dynvec *v) {
+    if (!v) {
+        errno = EINVAL;
+        #ifdef DEBUG_ON
+            perror("free. Vetor dinâmico inválido.");
+        #endif
+        return;
+    }
+    if (v->data) {
+        free(v->data);
+    }
+    free(v);    
+}
 
 
 
