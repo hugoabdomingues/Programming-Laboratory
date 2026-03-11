@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <stddef.h>
 #include <stdio.h>
 #include <errno.h>
@@ -5,12 +6,27 @@
 #include <string.h>
 #include <stdbool.h>
 
+
+
 typedef struct Dynvec {
     void *data;   
     size_t elem_size;    
     size_t capacity; /* capacidade total do vetor  */
     size_t length; //espaço do vetor preenchido com data
 } dynvec;
+
+typedef dynvec stack;
+// Optamos por aproveitar o mecanismo das macros para
+// concretizar esta semelhança.
+#define stack_create dynvec_create
+#define stack_free dynvec_free
+#define stack_push dynvec_push
+#define stack_pop dynvec_pop
+#define stack_top dynvec_top
+// A excepção é o predicado stack_is_empty,
+// Apenas... basta defini-lo como uma igualdade directa
+#define stack_is_empty(vec) (dynvec_length(vec) == 0)
+
 
 #define DYNVEC_INIT_CAPACITY 4
 
@@ -123,13 +139,23 @@ void* dynvec_pop (dynvec *v) {
     }
     //guardamos o item que queremos dar pop antes de diminuirmos o length para dps dar return
     void *item = (char *)v->data + (v->length-1) * v->elem_size;
+    //alocamos memória para guardar o item que queremos dar pop para evitar retornar um item perdido pelo resize
+    void *item_copy_for_return = malloc(v->elem_size);
+    if (!item_copy_for_return) {
+        errno = ENOMEM;
+        #ifdef DEBUG_ON
+            perror("Pop. Erro ao alocar memória");
+        #endif
+        return NULL;
+    }
+    memmove(item_copy_for_return, item, v->elem_size);
     v->length--;
 
     //redimensionar o vetor, caso a length seja igual ou menor que 1/4 do tamanho de capacity
     if (v->length <= v->capacity * 0.25) {
         dynvec_resize(v, v->capacity * 0.5);
     }  
-    return item;
+    return item_copy_for_return;
 }
 
 
@@ -198,6 +224,9 @@ void* dynvec_top(dynvec *v) {
         #ifdef DEBUG_ON
             perror("top. Vetor dinâmico inválido.");
         #endif
+        return NULL;
+    }
+    if (v->length == 0) {
         return NULL;
     }
     return (char *)v->data + (v->length - 1) * v->elem_size;
@@ -360,6 +389,27 @@ void dynvec_free (dynvec *v) {
         free(v->data);
     }
     free(v);    
+}
+
+int visibilidade(dynvec *v, int visibilidade[]) {
+
+}
+
+int main () {
+
+    int n;
+    if (scanf("%d", &n) != 1 && n < 1 && n > 10000) {
+        return 1;
+    }
+    
+    dynvec *towers = dynvec_create(sizeof(int));
+    int altura_torre;
+    for (int i = 0; i < n; i++) {
+        scanf("%d", &altura_torre);
+        dynvec_push(towers, &altura_torre);
+    }
+
+    return 0;
 }
 
 
