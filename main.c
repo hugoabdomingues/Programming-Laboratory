@@ -125,36 +125,24 @@ void dynvec_push (dynvec *v, void *item) {
 
 }
 
-void* dynvec_pop (dynvec *v) {
+void dynvec_pop (dynvec *v) {
     if (!v) {
         errno = EINVAL;
         #ifdef DEBUG_ON
             perror("Pop. Vetor dinâmico inválido.");
         #endif
-        return NULL;
+        return;
     }
     if (v->length == 0) {
-        return NULL;
+        return;
     }
-    //guardamos o item que queremos dar pop antes de diminuirmos o length para dps dar return
-    void *item = (char *)v->data + (v->length-1) * v->elem_size;
-    //alocamos memória para guardar o item que queremos dar pop para evitar retornar um item perdido pelo resize
-    void *item_copy_for_return = malloc(v->elem_size);
-    if (!item_copy_for_return) {
-        errno = ENOMEM;
-        #ifdef DEBUG_ON
-            perror("Pop. Erro ao alocar memória");
-        #endif
-        return NULL;
-    }
-    memmove(item_copy_for_return, item, v->elem_size);
+
     v->length--;
 
     //redimensionar o vetor, caso a length seja igual ou menor que 1/4 do tamanho de capacity
     if (v->length <= v->capacity * 0.25) {
         dynvec_resize(v, v->capacity * 0.5);
     }  
-    return item_copy_for_return;
 }
 
 
@@ -397,7 +385,7 @@ typedef struct torre {
 } Torre;
 
 
-int main(void) {
+int main() {
 
     dynvec *torres = dynvec_create(sizeof(Torre));
     int altura_torre;
@@ -410,16 +398,66 @@ int main(void) {
 
     int total_torres = dynvec_length(torres);
 
+
+    //Criamos o stack para guardar os índices das torres
     dynvec *stack = stack_create(sizeof(int));
-    
 
+    //o algoritmo começa aqui
+    for (int i = 0; i < total_torres; i++) {
+        //Vai buscar o ponteiro para a torre atual que estamos a analisar
+        Torre *torre_atual = (Torre *)dynvec_get(torres, i);
 
+        //equanto houver torres no stack para olhar para a esquerda fazer:
+        while (!stack_is_empty(stack)) {
+            
+            //ver qual é o índice da torre no topo do stack
+            int *indice_topo_ptr = (int *)stack_top(stack);
+            int j = *indice_topo_ptr; // j é o topo da stack
+            
+            //vai buscar os dados da torre que está no topo da stack
+            Torre *torre_stack = (Torre *)dynvec_get(torres, j);
 
+            // Regra 1: Pontuação (Mínimo das alturas)
+            int min_altura = (torre_atual->altura < torre_stack->altura) ? torre_atual->altura : torre_stack->altura;
 
+            // DÁ PONTOS AOS DOIS LADOS EM SIMULTÂNEO!
+            torre_atual->visibilidade += min_altura;
+            torre_stack->visibilidade += min_altura;
 
+            // se a torre atual for maior que o topo da stack fazemos pop ao topo
+            if (torre_atual->altura > torre_stack->altura) {
+                //se a torre atual é maior. Tapa a vista da torre j 
+                stack_pop(stack); 
+            } 
+            else if (torre_atual->altura == torre_stack->altura) {
+                //têm a mesma altura. Ambas tapam a vista uma da outra.
+                stack_pop(stack); //fazemos pop ao topo
+                break; /*como têm a mesma altura, tapam-se uma à outra. A torre atual tapa a vista da que está no topo para a frente (por isso leva pop e 
+                é apagada do retrovisor). MASSS a que está no topo da stack também tapa vista da atual para trás. Tendo isto em conta fazemos break, para que a torre 
+                atual n ganhe pontos que n devia ganhar. Ou seja, quando têm altura igual damos pop na que está no topo, apenas para diminuir o tamanho da stack*/
+            } 
+            else { 
+                // A torre do topo da stack (j) é maior. Tapa a vista da torre atual para a esquerda.
+                break;   // não fazemos pop. saímos do while
 
-    return 0;
+            }
+        }
 
+        /* adicionamos o ENDEREÇO da torre i ao stack. 
+        Adicionamos no início do loop e adicionamos sempre no fim de cada iteração. 
+        a torre atual entra sempre no stack para as próximas a poderem ver*/
+        stack_push(stack, &i); //adicionamos o endereço --> &i
+    }    
 
-    
+    // 4. Imprimir os resultados (um por linha)
+    for (int i = 0; i < total_torres; i++) {
+        Torre *t = (Torre *)dynvec_get(torres, i);
+        printf("%lld\n", t->visibilidade);
+    }
+
+    // 5. Limpezas finais
+    dynvec_free(torres);
+    dynvec_free(stack);
+
+    return 0;    
 }
