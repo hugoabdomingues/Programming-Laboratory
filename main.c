@@ -1,4 +1,4 @@
-#include <cstdio>
+#include <stdio.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <errno.h>
@@ -15,7 +15,6 @@ typedef struct Dynvec {
     size_t length; //espaço do vetor preenchido com data
 } dynvec;
 
-typedef dynvec stack;
 // Optamos por aproveitar o mecanismo das macros para
 // concretizar esta semelhança.
 #define stack_create dynvec_create
@@ -391,27 +390,36 @@ void dynvec_free (dynvec *v) {
     free(v);    
 }
 
-int visibilidade(dynvec *v, int visibilidade[]) {
 
-}
+typedef struct torre {
+    int altura;
+    long long visibilidade;
+} Torre;
 
-int main () {
 
-    int n;
-    if (scanf("%d", &n) != 1 && n < 1 && n > 10000) {
-        return 1;
-    }
-    
-    dynvec *towers = dynvec_create(sizeof(int));
+int main(void) {
+
+    dynvec *torres = dynvec_create(sizeof(Torre));
     int altura_torre;
-    for (int i = 0; i < n; i++) {
-        scanf("%d", &altura_torre);
-        dynvec_push(towers, &altura_torre);
+    while (scanf("%d", &altura_torre)!= EOF) {
+        Torre nova_torre;
+        nova_torre.altura = altura_torre;  
+        nova_torre.visibilidade = 0;
+        dynvec_push(torres, &nova_torre);
     }
+
+    int total_torres = dynvec_length(torres);
+
+    dynvec *stack = stack_create(sizeof(int));
+    
+
+
+
+
+
 
     return 0;
+
+
+    
 }
-
-
-
-
