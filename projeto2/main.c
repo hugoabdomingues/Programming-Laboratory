@@ -390,11 +390,18 @@ typedef struct aresta
     Ponto B;
 } Aresta;
 
-int *comparePontos(const void *a, const void *b) {
+/**
+ * Função para comparar as coordenadas dos pontos de cada sensor, para dps usarmos o qsort para as ordenarmos
+ * Se devolver um número negativo, o qsort percebe que a < b
+ * Se devolver um número positivo, o qsort percebe que b > a
+ * Se devolver zero, a == b
+ */
+int comparePontos(const void *a, const void *b) {
 
     //Fazemos cast de void para Ponto
     Ponto *p1 = (Ponto *)a;
     Ponto *p2 = (Ponto *)b;
+    //se o x for igual, verificamos o y
     if (p1->x == p2->x) {
         return p1->y - p2->y;
     }
