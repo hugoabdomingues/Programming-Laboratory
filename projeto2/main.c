@@ -378,9 +378,46 @@ void dynvec_free (dynvec *v) {
     free(v);    
 }
 
+typedef struct ponto
+{
+    int x;
+    int y;
+} Ponto;
+
+typedef struct aresta
+{
+    Ponto A;
+    Ponto B;
+} Aresta;
+
+int *comparePontos(const void *a, const void *b) {
+
+    //Fazemos cast de void para Ponto
+    Ponto *p1 = (Ponto *)a;
+    Ponto *p2 = (Ponto *)b;
+    if (p1->x == p2->x) {
+        return p1->y - p2->y;
+    }
+    return p1->x - p2->x;
+}
 
 
 int main() {
+
+    //alocamos memória para a struct Ponto, que representa a localização de cada sensor
+    dynvec *sensores = dynvec_create(sizeof(Ponto));
+    //alocamos memória para as arestas (segmentos de reta de um sensor A ao sensor B)
+    dynvec *aresta = dynvec_create(sizeof(Aresta));
+
+    // criamos uma variável local do tipo Ponto para lermos os pontos dados no input, que representam a localização de cada sensor
+    Ponto ponto_atual;
+
+    while (scanf("%d %d", &ponto_atual.x, &ponto_atual.y) == 2) {
+        dynvec_push(sensores, &ponto_atual);
+    }
+    
+
+
 
    return 0;
 }
