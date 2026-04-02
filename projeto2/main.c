@@ -323,6 +323,7 @@ bool dynvec_contains(dynvec* v, void *item) {
  * igualmente passado por referência (v).
  * @param v array dinâmico
  * @param item 
+ * @return index ou erro
  */
 int dynvec_index(dynvec* v, void* item) {
     if (!v) {
@@ -341,26 +342,7 @@ int dynvec_index(dynvec* v, void* item) {
     }
     return -1;  
 }
-/**
- * Esta função imprime na saída standard (stdout) o conteúdo do dynvec passado em parâmetro.
- */
-void dynvec_print (dynvec *v) {
-        if (!v) {
-        errno = EINVAL;
-        #ifdef DEBUG_ON
-            perror("print. Vetor dinâmico inválido.");
-        #endif
-        return;
-    }
 
-    // Convertemos os dados genéricos (void*) para um array de inteiros (int*)
-    int *valores_do_array = (int *)v->data;
-
-    for (int i = 0; i < (int)v->length; i++) {
-        printf("%d ", valores_do_array[i]);
-    }
-    printf("\n");
-}
 /**
  * Esta função liberta todo o espaço do dynvec v passado por referência, campo a campo, terminando com v ele próprio.
  */
@@ -378,17 +360,16 @@ void dynvec_free (dynvec *v) {
     free(v);    
 }
 
-typedef struct ponto
-{
+typedef struct ponto {
     int x;
     int y;
 } Ponto;
 
-typedef struct aresta
-{
+typedef struct aresta {
     Ponto A;
     Ponto B;
 } Aresta;
+
 
 /**
  * Função para comparar as coordenadas dos pontos de cada sensor, para dps usarmos o qsort para as ordenarmos
@@ -409,6 +390,70 @@ int comparePontos(const void *a, const void *b) {
 }
 
 
+/**
+ * Esta função imprime na saída standard (stdout) o conteúdo do dynvec sensores passado em parâmetro.
+ */
+void dynvec_Ponto_print (dynvec *v) {
+        if (!v) {
+        errno = EINVAL;
+        #ifdef DEBUG_ON
+            perror("print. Vetor dinâmico inválido.");
+        #endif
+        return;
+    }
+
+    // Convertemos os dados genéricos (void*) para um array (Ponto *)
+    Ponto *valores_do_array = (Ponto *)v->data;
+
+    for (int i = 0; i < (int)v->length; i++) {
+        printf("%d %d\n", valores_do_array[i].x, valores_do_array[i].y);
+    }
+}
+
+
+/**
+ * Função que cálcula o determinante de 3 pontos
+ */
+int determinante(Ponto a, Ponto b, Ponto *p) {
+    return (b.x - a.x) * (p->y - a.y) - (b.y - a.y) * (p->x - a.x);
+}
+
+void solve(dynvec *sensores, Ponto a, Ponto b, dynvec *arestas) {
+    int max_det = 0;
+    Ponto p_max;
+    int encontrou_ponto = 0; // 0 significa falso, 1 significa verdadeiro
+
+    // 1. Procurar o candidato mais afastado à esquerda
+    for (int i = 0; i < dynvec_length(sensores); i++) {
+        // A TUA MISSÃO AQUI:
+        // a) Ir buscar o 'ponto_atual' ao vetor 'sensores'.
+        Ponto *p_atual = (Ponto *)dynvec_get(sensores, i);
+        // b) Calcular o determinante usando os pontos A, B e o 'ponto_atual'.
+        if (i == 0)
+        {
+            /* code */
+        }
+        
+        max_det = determinante(a,b,p_atual);
+        // c) Se o determinante for > max_det:
+        //      - Atualizar o max_det
+        //      - Guardar o 'ponto_atual' na variável p_max
+        //      - Marcar encontrou_ponto = 1
+    }
+
+    // 2. Paragem ou Recursão
+    if (encontrou_ponto == 0) {
+        // Caso base: não há mais pontos à esquerda. Confirmamos a aresta A->B!
+        Aresta nova_aresta = {a, b};
+        dynvec_push(arestas, &nova_aresta);
+    } else {
+        // Caso recursivo: o P_max formou um triângulo. Vamos analisar as duas novas "paredes" viradas para fora.
+        solve(sensores, a, p_max, arestas);
+        solve(sensores, p_max, b, arestas);
+    }
+}
+
+
 int main() {
 
     //alocamos memória para a struct Ponto, que representa a localização de cada sensor
@@ -422,6 +467,11 @@ int main() {
     while (scanf("%d %d", &ponto_atual.x, &ponto_atual.y) == 2) {
         dynvec_push(sensores, &ponto_atual);
     }
+
+    // qsort(array, numero_de_elementos, tamanho_de_cada_elemento, funcao_de_comparacao)
+    qsort(sensores->data, dynvec_length(sensores), sizeof(Ponto), comparePontos);
+
+    dynvec_Ponto_print(sensores);
     
 
 
