@@ -429,18 +429,14 @@ void solve(dynvec *sensores, Ponto a, Ponto b, dynvec *arestas) {
         // a) Ir buscar o 'ponto_atual' ao vetor 'sensores'.
         Ponto *p_atual = (Ponto *)dynvec_get(sensores, i);
         // b) Calcular o determinante usando os pontos A, B e o 'ponto_atual'.
-        if (i == 0)
-        {
-            /* code */
-        }
-        
-        max_det = determinante(a,b,p_atual);
+        int det_atual = determinante(a,b,p_atual);
         // c) Se o determinante for > max_det:
-        //      - Atualizar o max_det
-        //      - Guardar o 'ponto_atual' na variável p_max
-        //      - Marcar encontrou_ponto = 1
+        if (det_atual > max_det){
+            max_det = det_atual;
+            p_max = *p_atual;
+            encontrou_ponto = 1;
+        }
     }
-
     // 2. Paragem ou Recursão
     if (encontrou_ponto == 0) {
         // Caso base: não há mais pontos à esquerda. Confirmamos a aresta A->B!
