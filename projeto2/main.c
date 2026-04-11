@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <math.h>
 
 
 
@@ -371,6 +372,8 @@ typedef struct aresta {
 } Aresta;
 
 
+
+
 /**
  * Função para comparar as coordenadas dos pontos de cada sensor, para dps usarmos o qsort para as ordenarmos
  * Se devolver um número negativo, o qsort percebe que a < b
@@ -428,9 +431,6 @@ void dynvec_aresta_print (dynvec *aresta) {
     
     
 }
-
-
-
 /**
  * Função que cálcula o determinante de 3 pontos
  */
@@ -439,6 +439,13 @@ int determinante(Ponto a, Ponto b, Ponto *p) {
 }
 
 void solve(dynvec *sensores, Ponto a, Ponto b, dynvec *arestas) {
+    if (!sensores) {
+        errno = EINVAL;
+        #ifdef DEBUG_ON
+            perror("solve")
+        #endif
+    }
+    
     int max_det = 0;
     Ponto ponto_max;
     int encontrou_ponto = 0; 
@@ -469,6 +476,33 @@ void solve(dynvec *sensores, Ponto a, Ponto b, dynvec *arestas) {
     }
 }
 
+void perimetro_arestas(dynvec *aresta_dynvec) {
+    if (!aresta_dynvec) {
+        errno = EINVAL;
+        #ifdef DEBUG_ON
+            perror("perimetro_arestas. vetor dinâmico inválido.")
+        #endif
+        return;
+    }
+    
+    //cast de dynvec para Aresta
+    Aresta *aresta = (Aresta *)aresta_dynvec->data; 
+    double soma_lados = 0;
+    for (int i = 0; i < (int)aresta_dynvec->length; i++) {
+
+        //distância entre dois pontos é igual sqrt((xB – xA)² + (yB – yA)²).
+        //Vamos buscar o ponto A da aresta atual
+        Ponto pontoA = (Ponto)aresta[i].A;
+        //ponto B:
+        Ponto pontoB = (Ponto)aresta[i].B;
+        //sqrt((xB – xA)² + (yB – yA)²).
+        double comprimento_aresta = sqrt(pow(pontoB.x - pontoA.x, 2) + pow(pontoB.y - pontoA.y, 2));
+        soma_lados = soma_lados + comprimento_aresta;
+
+    }
+    printf("%.2f\n", soma_lados);
+}
+
 
 int main() {
 
@@ -490,14 +524,15 @@ int main() {
     Ponto *pontoA = (Ponto *)dynvec_get(sensores, 0);
     Ponto *pontoB = (Ponto *)dynvec_top(sensores);
 
+    //fazemos para quando temos a reta A->B. Ou seja, verificamos apenas a parte de cima da reta AB
     solve(sensores, *pontoA, *pontoB, aresta);
+    //e dps fazemos para quando temos B->A. Ou seja, para a parte de baixo da reta AB
+    solve(sensores, *pontoB, *pontoA, aresta);
 
     dynvec_Ponto_print(sensores);
+    printf("%d\n", (int)dynvec_length(aresta));
     dynvec_aresta_print(aresta);
-    
+    perimetro_arestas(aresta);
    
-    
-
-
    return 0;
 }
