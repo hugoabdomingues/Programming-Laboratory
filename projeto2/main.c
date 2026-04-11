@@ -409,6 +409,26 @@ void dynvec_Ponto_print (dynvec *v) {
         printf("%d %d\n", valores_do_array[i].x, valores_do_array[i].y);
     }
 }
+/**
+ * função print das arestas
+ */
+void dynvec_aresta_print (dynvec *aresta) {
+    if (!aresta) {
+        errno = EINVAL;
+        #ifdef DEBUG_ON
+            perror("print_aresta. Vetor dinâmico inválido.")
+        #endif
+        return;
+    }
+
+    Aresta *parede_final = (Aresta *)aresta->data;
+    for (int i = 0; i < (int)aresta->length; i++) {
+        printf("%d %d %d %d\n", parede_final[i].A.x, parede_final[i].A.y, parede_final[i].B.x, parede_final[i].B.y);
+    }
+    
+    
+}
+
 
 
 /**
@@ -420,32 +440,32 @@ int determinante(Ponto a, Ponto b, Ponto *p) {
 
 void solve(dynvec *sensores, Ponto a, Ponto b, dynvec *arestas) {
     int max_det = 0;
-    Ponto p_max;
-    int encontrou_ponto = 0; // 0 significa falso, 1 significa verdadeiro
+    Ponto ponto_max;
+    int encontrou_ponto = 0; 
 
-    // 1. Procurar o candidato mais afastado à esquerda
+    // Procurar o candidato mais afastado à esquerda
     for (int i = 0; i < dynvec_length(sensores); i++) {
-        // A TUA MISSÃO AQUI:
-        // a) Ir buscar o 'ponto_atual' ao vetor 'sensores'.
-        Ponto *p_atual = (Ponto *)dynvec_get(sensores, i);
-        // b) Calcular o determinante usando os pontos A, B e o 'ponto_atual'.
-        int det_atual = determinante(a,b,p_atual);
-        // c) Se o determinante for > max_det:
+        // Ir buscar o 'ponto_atual' ao vetor 'sensores'.
+        Ponto *ponto_atual = (Ponto *)dynvec_get(sensores, i);
+        // Calcular o determinante usando os pontos A, B e o 'ponto_atual'.
+        int det_atual = determinante(a,b,ponto_atual);
+        // Se o determinante for > max_det:
         if (det_atual > max_det){
             max_det = det_atual;
-            p_max = *p_atual;
+            ponto_max = *ponto_atual;
+            //se encontrarmos um novo ponto max alteramos a flag para 1 para chamarmos recursivamente a função com este novo ponto
             encontrou_ponto = 1;
         }
     }
-    // 2. Paragem ou Recursão
+    //Caso não haja um ponto mais exterior que este, a flag mantém-se igual a 0 e entramos no caso base, onde criamos finalmente uma aresta. do convexo
     if (encontrou_ponto == 0) {
-        // Caso base: não há mais pontos à esquerda. Confirmamos a aresta A->B!
+        // Caso base: não há mais pontos à esquerda. Confirmamos a aresta A->B
         Aresta nova_aresta = {a, b};
         dynvec_push(arestas, &nova_aresta);
     } else {
-        // Caso recursivo: o P_max formou um triângulo. Vamos analisar as duas novas "paredes" viradas para fora.
-        solve(sensores, a, p_max, arestas);
-        solve(sensores, p_max, b, arestas);
+        //caso recursivo: o ponto_max forma um triângulo. Vamos analisar as duas novas «paredes» viradas para fora.
+        solve(sensores, a, ponto_max, arestas);
+        solve(sensores, ponto_max, b, arestas);
     }
 }
 
@@ -467,9 +487,16 @@ int main() {
     // qsort(array, numero_de_elementos, tamanho_de_cada_elemento, funcao_de_comparacao)
     qsort(sensores->data, dynvec_length(sensores), sizeof(Ponto), comparePontos);
 
-    dynvec_Ponto_print(sensores);
-    
+    Ponto *pontoA = (Ponto *)dynvec_get(sensores, 0);
+    Ponto *pontoB = (Ponto *)dynvec_top(sensores);
 
+    solve(sensores, *pontoA, *pontoB, aresta);
+
+    dynvec_Ponto_print(sensores);
+    dynvec_aresta_print(aresta);
+    
+   
+    
 
 
    return 0;
