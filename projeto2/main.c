@@ -433,11 +433,24 @@ void dynvec_aresta_print (dynvec *aresta) {
 }
 /**
  * Função que cálcula o determinante de 3 pontos
+ * @param pontoA 
+ * @param PontoB 
+ * @param p -> ponto acima do segmento de reta
  */
 int determinante(Ponto a, Ponto b, Ponto *p) {
     return (b.x - a.x) * (p->y - a.y) - (b.y - a.y) * (p->x - a.x);
 }
 
+/**
+ * Algoritmo QuickHull. Função principal do projeto (recursiva).
+ * Usando os pontos mais afastados A e B (A = o ponto com menor x e B = o ponto com maior x), descobrimos todos os pontos mais exteriores
+ * que fazem parte do convexo que queremos encontrar.
+ * Para isto delíneamos o segmento de reta A->B e verificamos através do determinante, todos os pontos exteriores acima 
+ * desta reta (det > 0). Ou seja, os pontos à sua esquerda.
+ * Em seguida chamamos a mesma função com o segmento de reta ao contrário: B->A, para descobrirmos os pontos 
+ * exteriores que ficam abaixo deste segmento de reta. Como agr o sentido é diferente, os pontos à esquerda do segmento
+ * de reta são os que ficam em baixo. Logo, neste caso det > 0 vai encontrar os pontos que ficam abaixo do segmento.
+ */
 void solve(dynvec *sensores, Ponto a, Ponto b, dynvec *arestas) {
     if (!sensores) {
         errno = EINVAL;
@@ -475,7 +488,10 @@ void solve(dynvec *sensores, Ponto a, Ponto b, dynvec *arestas) {
         solve(sensores, ponto_max, b, arestas);
     }
 }
-
+/**
+ * função para calcular o perímetro do convexo formado pela soma de todas as arestas
+ * @param arestas do tipo dynvec (ainda por converter para tipo Aresta)
+ */
 void perimetro_arestas(dynvec *aresta_dynvec) {
     if (!aresta_dynvec) {
         errno = EINVAL;
