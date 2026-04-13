@@ -450,12 +450,17 @@ int determinante(Ponto a, Ponto b, Ponto *p) {
  * Em seguida chamamos a mesma função com o segmento de reta ao contrário: B->A, para descobrirmos os pontos 
  * exteriores que ficam abaixo deste segmento de reta. Como agr o sentido é diferente, os pontos à esquerda do segmento
  * de reta são os que ficam em baixo. Logo, neste caso det > 0 vai encontrar os pontos que ficam abaixo do segmento.
+ * @param sensores dynvec de pontos que representam a localização de cada sensor
+ * @param a ponto inicial do segmento de reta 
+ * @param b ponto final do segmento de reta
+ * @param arestas dynvec do tipo arestas que vai armazenar todas as arestas, assim que descobrirmos os pontos externos
+ * que as constituem.
  */
 void solve(dynvec *sensores, Ponto a, Ponto b, dynvec *arestas) {
     if (!sensores) {
         errno = EINVAL;
         #ifdef DEBUG_ON
-            perror("solve")
+            perror("solve. Vetor dinâmico inválido.")
         #endif
     }
     
@@ -463,13 +468,13 @@ void solve(dynvec *sensores, Ponto a, Ponto b, dynvec *arestas) {
     Ponto ponto_max;
     int encontrou_ponto = 0; 
 
-    // Procurar o candidato mais afastado à esquerda
+    //procurar o ponto mais afastado à esquerda
     for (int i = 0; i < dynvec_length(sensores); i++) {
-        // Ir buscar o 'ponto_atual' ao vetor 'sensores'.
+
         Ponto *ponto_atual = (Ponto *)dynvec_get(sensores, i);
-        // Calcular o determinante usando os pontos A, B e o 'ponto_atual'.
+        // calcular o determinante usando os pontos A, B e o ponto_atual.
         int det_atual = determinante(a,b,ponto_atual);
-        // Se o determinante for > max_det:
+
         if (det_atual > max_det){
             max_det = det_atual;
             ponto_max = *ponto_atual;
@@ -488,6 +493,7 @@ void solve(dynvec *sensores, Ponto a, Ponto b, dynvec *arestas) {
         solve(sensores, ponto_max, b, arestas);
     }
 }
+
 /**
  * função para calcular o perímetro do convexo formado pela soma de todas as arestas
  * @param arestas do tipo dynvec (ainda por converter para tipo Aresta)
@@ -549,6 +555,10 @@ int main() {
     printf("%d\n", (int)dynvec_length(aresta));
     dynvec_aresta_print(aresta);
     perimetro_arestas(aresta);
-   
-   return 0;
+
+
+
+    dynvec_free(sensores);
+    dynvec_free(aresta);
+    return 0;
 }
